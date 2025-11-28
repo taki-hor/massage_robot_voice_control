@@ -69,12 +69,21 @@ cd ui && npm install
 ### Running
 
 ```bash
-# Start server
-python server/main.py
+# Option 1: Use run.py (recommended)
+python run.py
+
+# Option 2: Use uvicorn directly
+python -m uvicorn server.main:app --host 0.0.0.0 --port 8000
+
+# Option 3: Use module syntax
+python -m server.main
 
 # Start UI (separate terminal)
 cd ui && npm run dev
 ```
+
+Server will be available at: http://localhost:8000
+API Docs at: http://localhost:8000/docs
 
 ## API Endpoints
 
