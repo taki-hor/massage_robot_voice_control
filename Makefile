@@ -15,7 +15,11 @@ dev:
 
 # Start FastAPI server
 server:
-	uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
+	python run.py
+
+# Start FastAPI server with hot reload
+server-dev:
+	python -m uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
 
 # Start UI development server
 ui:

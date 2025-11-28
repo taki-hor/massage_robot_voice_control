@@ -21,18 +21,32 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 
-from .models import (
-    RobotStateResponse,
-    RobotCommandRequest,
-    RobotCommandResponse,
-    PatternRequest,
-    ForceRequest,
-    TranscriptRequest,
-    IntentResponse,
-    VoiceCommandRequest,
-    VoiceCommandResponse,
-    HealthResponse,
-)
+try:
+    from .models import (
+        RobotStateResponse,
+        RobotCommandRequest,
+        RobotCommandResponse,
+        PatternRequest,
+        ForceRequest,
+        TranscriptRequest,
+        IntentResponse,
+        VoiceCommandRequest,
+        VoiceCommandResponse,
+        HealthResponse,
+    )
+except ImportError:
+    from server.models import (
+        RobotStateResponse,
+        RobotCommandRequest,
+        RobotCommandResponse,
+        PatternRequest,
+        ForceRequest,
+        TranscriptRequest,
+        IntentResponse,
+        VoiceCommandRequest,
+        VoiceCommandResponse,
+        HealthResponse,
+    )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
