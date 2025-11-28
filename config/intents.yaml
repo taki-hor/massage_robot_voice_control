@@ -1,0 +1,147 @@
+# Voice Command Intent Configuration
+# Keywords for intent parsing (Chinese + English)
+
+actions:
+  start:
+    keywords:
+      - "開始"
+      - "啟動"
+      - "start"
+      - "begin"
+      - "go"
+      - "run"
+      - "按摩"
+      - "開始按摩"
+    priority: 1
+
+  stop:
+    keywords:
+      - "停止"
+      - "結束"
+      - "stop"
+      - "end"
+      - "halt"
+      - "quit"
+      - "停"
+      - "不要"
+    priority: 1
+
+  pause:
+    keywords:
+      - "暫停"
+      - "等一下"
+      - "pause"
+      - "wait"
+      - "hold"
+    priority: 1
+
+  resume:
+    keywords:
+      - "繼續"
+      - "resume"
+      - "continue"
+      - "go on"
+      - "再開始"
+    priority: 1
+
+force_adjustments:
+  harder:
+    keywords:
+      - "大力"
+      - "用力"
+      - "harder"
+      - "more"
+      - "強"
+      - "加力"
+      - "重一點"
+      - "harder please"
+      - "more force"
+    delta_n: 5.0
+
+  softer:
+    keywords:
+      - "輕"
+      - "小力"
+      - "softer"
+      - "less"
+      - "gentle"
+      - "輕一點"
+      - "減力"
+      - "softer please"
+      - "less force"
+    delta_n: -5.0
+
+patterns:
+  linear:
+    id: 1
+    keywords:
+      - "直線"
+      - "推"
+      - "linear"
+      - "stroke"
+      - "推拿"
+    description: "Linear pushing motion along calf"
+
+  circular:
+    id: 2
+    keywords:
+      - "圓"
+      - "揉"
+      - "circular"
+      - "rub"
+      - "打圈"
+    description: "Circular rubbing motion"
+
+  trigger:
+    id: 3
+    keywords:
+      - "點"
+      - "按"
+      - "trigger"
+      - "press"
+      - "point"
+      - "穴位"
+    description: "Point pressure on specific locations"
+
+  kneading:
+    id: 4
+    keywords:
+      - "捏"
+      - "knead"
+      - "kneading"
+      - "揉捏"
+    description: "Alternating pressure kneading"
+
+regions:
+  left:
+    keywords:
+      - "左"
+      - "left"
+      - "左腿"
+      - "左邊"
+      - "左小腿"
+
+  right:
+    keywords:
+      - "右"
+      - "right"
+      - "右腿"
+      - "右邊"
+      - "右小腿"
+
+# Special commands
+special:
+  emergency_stop:
+    keywords:
+      - "緊急停止"
+      - "emergency"
+      - "危險"
+      - "danger"
+    action: "immediate_stop"
+
+  home:
+    keywords:
+      - "回家"
+      - "home"
+      - "回原點"
+    action: "return_home"

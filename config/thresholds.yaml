@@ -1,0 +1,32 @@
+# Thresholds for Facial Expression / Comfort Level
+# Maps TCP force to user comfort visualization
+
+comfort_levels:
+  # Force thresholds (N) for emoji display
+  comfortable:              # 😀
+    max_force: 15.0
+    color: "#2ECC71"        # green
+  neutral:                  # 😐
+    min_force: 15.0
+    max_force: 25.0
+    color: "#F1C40F"        # yellow
+  uncomfortable:            # 😖
+    min_force: 25.0
+    color: "#E74C3C"        # red
+
+# Comfort index calculation
+# comfort_index = 100 - ((force - min) / (max - min)) * 100
+# Clamped to [0, 100]
+comfort_index:
+  min_force: 5.0            # Below this = 100% comfort
+  max_force: 35.0           # Above this = 0% comfort
+
+# Display update rate
+ui:
+  update_interval_ms: 100   # 10 Hz
+  smoothing_factor: 0.3     # EMA smoothing for force display
+
+# Alert thresholds
+alerts:
+  force_warning: 40.0       # N - show warning in UI
+  force_critical: 48.0      # N - show critical alert

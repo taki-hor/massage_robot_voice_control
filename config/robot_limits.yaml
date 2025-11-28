@@ -1,0 +1,66 @@
+# Robot Configuration for UR10e Massage System
+# Derived from: Universal_Robot_External_GUI/config.py
+
+connection:
+  robot_ip: "192.168.1.100"
+  rtde_port: 30004
+  dashboard_port: 29999
+  rtde_frequency_hz: 125
+
+motion:
+  tcp:
+    speed_default: 0.05      # m/s
+    speed_range: [0.01, 0.5]
+    accel_default: 0.5       # m/s²
+    accel_range: [0.1, 2.0]
+    step_sizes: [0.001, 0.005, 0.01, 0.05]  # m
+  joint:
+    speed_default: 0.1       # rad/s
+    speed_range: [0.05, 0.4]
+    accel_default: 1.0       # rad/s²
+    accel_range: [0.1, 3.0]
+
+force_control:
+  target_default: 10.0       # N (massage default)
+  target_range: [5.0, 30.0]  # N (massage safe range)
+  max_displacement: 0.03     # m
+  timeout_seconds: 20
+  direction: [0, 0, 1, 0, 0, 0]  # Z-axis default
+  speed_limits:
+    linear: 0.2              # m/s
+    angular: 2.0             # rad/s
+
+workspace:
+  # Relative to robot base
+  x: [-0.8, 0.8]             # m
+  y: [-0.8, 0.8]             # m
+  z: [0.0, 1.2]              # m
+  warning_margin: 0.05       # m (5cm warning zone)
+
+safety:
+  max_force: 50              # N (hard limit)
+  max_torque: 10             # Nm
+  max_velocity: 1.0          # m/s
+  warning_ratio: 0.8         # 80% of max = warning
+  collision_spike: 30        # N (sudden increase)
+  freedrive:
+    max_force: 80            # N (relaxed for freedrive)
+    max_torque: 15           # Nm
+
+massage:
+  # Massage-specific limits
+  force_range: [5, 30]       # N - comfortable massage range
+  step_force: 2.0            # N per voice adjustment
+  patterns:
+    linear:
+      stroke_length: 0.15    # m
+      speed: 0.05            # m/s
+    circular:
+      radius: 0.03           # m
+      speed: 0.03            # m/s
+    trigger:
+      hold_time: 2.0         # seconds
+      force_multiplier: 1.0
+    kneading:
+      cycles: 5
+      interval: 0.3          # seconds
