@@ -1,0 +1,261 @@
+# UR10e Massage Resident Script
+# Runs continuously, controlled via RTDE registers
+#
+# Input Registers:
+#   input_int_register_0: Pattern ID (0-4)
+#   input_int_register_1: Control flag (0=stop, 1=run, 2=pause)
+#   input_double_register_0: Target force (N)
+#
+# Output Registers:
+#   output_double_register_0-2: TCP Force [Fx, Fy, Fz]
+#   output_int_register_0: Current pattern
+#   output_int_register_1: Status code
+
+def massage_resident():
+    # ============================
+    # Constants
+    # ============================
+    PATTERN_NONE = 0
+    PATTERN_LINEAR = 1
+    PATTERN_CIRCULAR = 2
+    PATTERN_TRIGGER = 3
+    PATTERN_KNEADING = 4
+
+    FLAG_STOP = 0
+    FLAG_RUN = 1
+    FLAG_PAUSE = 2
+
+    STATUS_IDLE = 0
+    STATUS_RUNNING = 1
+    STATUS_PAUSED = 2
+    STATUS_ERROR = 3
+
+    # Safety limits
+    MAX_FORCE = 45.0  # N - back off if exceeded
+    BACKOFF_DISTANCE = 0.01  # m
+
+    # Motion parameters
+    LINEAR_SPEED = 0.05  # m/s
+    LINEAR_ACCEL = 0.3   # m/s²
+    CIRCULAR_SPEED = 0.03
+    FORCE_FRAME = p[0, 0, 0, 0, 0, 0]
+
+    # ============================
+    # Helper Functions
+    # ============================
+
+    def get_force_magnitude():
+        local f = get_tcp_force()
+        return sqrt(f[0]*f[0] + f[1]*f[1] + f[2]*f[2])
+    end
+
+    def check_and_backoff():
+        # Safety backoff if force too high
+        local force = get_force_magnitude()
+        if force > MAX_FORCE:
+            local current = get_actual_tcp_pose()
+            local safe_pos = pose_add(current, p[0, 0, BACKOFF_DISTANCE, 0, 0, 0])
+            movel(safe_pos, a=0.5, v=0.1)
+            return True
+        end
+        return False
+    end
+
+    def enable_force_control(target_force):
+        # Enable force mode in Z direction (tool frame)
+        local selection = [0, 0, 1, 0, 0, 0]
+        local wrench = [0, 0, target_force, 0, 0, 0]
+        local limits = [0.1, 0.1, 0.05, 1.0, 1.0, 1.0]
+        force_mode(FORCE_FRAME, selection, wrench, 2, limits)
+    end
+
+    def disable_force_control():
+        end_force_mode()
+    end
+
+    # ============================
+    # Massage Patterns
+    # ============================
+
+    def pattern_linear_stroke(target_force):
+        # Linear pushing motion along massage area
+        local start_pos = get_actual_tcp_pose()
+        local stroke_length = 0.15  # 15cm stroke
+        local end_pos = pose_add(start_pos, p[0, stroke_length, 0, 0, 0, 0])
+
+        enable_force_control(target_force)
+
+        # Forward stroke
+        movel(end_pos, a=LINEAR_ACCEL, v=LINEAR_SPEED)
+
+        # Return stroke (lighter)
+        local return_wrench = target_force * 0.5
+        force_mode(FORCE_FRAME, [0,0,1,0,0,0], [0,0,return_wrench,0,0,0], 2, [0.1,0.1,0.05,1,1,1])
+        movel(start_pos, a=LINEAR_ACCEL, v=LINEAR_SPEED)
+
+        disable_force_control()
+    end
+
+    def pattern_circular_rubbing(target_force):
+        # Circular rubbing motion
+        local center = get_actual_tcp_pose()
+        local radius = 0.03  # 3cm circles
+        local steps = 36  # 10 degree increments
+
+        enable_force_control(target_force)
+
+        local i = 0
+        while i < steps:
+            local angle = d2r(i * 10)
+            local offset_x = radius * cos(angle)
+            local offset_y = radius * sin(angle)
+            local target = pose_add(center, p[offset_x, offset_y, 0, 0, 0, 0])
+
+            # Use servoj for smooth circular motion
+            local q = get_inverse_kin(target)
+            servoj(q, 0, 0, 0.008, 0.1, 300)
+
+            i = i + 1
+
+            # Check for stop flag
+            if read_input_integer_register(1) == FLAG_STOP:
+                break
+            end
+        end
+
+        disable_force_control()
+    end
+
+    def pattern_trigger_press(target_force):
+        # Point pressure hold at current position
+        enable_force_control(target_force)
+
+        # Hold for 2 seconds
+        local hold_time = 2.0
+        local start_time = 0
+        while start_time < hold_time:
+            sleep(0.1)
+            start_time = start_time + 0.1
+
+            # Check for stop
+            if read_input_integer_register(1) == FLAG_STOP:
+                break
+            end
+
+            # Safety check
+            if check_and_backoff():
+                break
+            end
+        end
+
+        disable_force_control()
+    end
+
+    def pattern_kneading(target_force):
+        # Alternating pressure kneading
+        local cycles = 5
+        local i = 0
+
+        while i < cycles:
+            # Light pressure
+            enable_force_control(target_force * 0.6)
+            sleep(0.3)
+
+            # Check for stop
+            if read_input_integer_register(1) == FLAG_STOP:
+                disable_force_control()
+                break
+            end
+
+            # Strong pressure
+            enable_force_control(target_force)
+            sleep(0.3)
+
+            # Safety check
+            if check_and_backoff():
+                disable_force_control()
+                break
+            end
+
+            disable_force_control()
+            i = i + 1
+        end
+    end
+
+    # ============================
+    # Main Control Loop
+    # ============================
+
+    local current_status = STATUS_IDLE
+
+    while True:
+        # Read control registers
+        local pattern_id = read_input_integer_register(0)
+        local control_flag = read_input_integer_register(1)
+        local target_force = read_input_float_register(0)
+
+        # Clamp force to safe range
+        if target_force < 5.0:
+            target_force = 5.0
+        end
+        if target_force > 30.0:
+            target_force = 30.0
+        end
+
+        # Get current TCP force for output
+        local tcp_force = get_tcp_force()
+
+        # Write output registers
+        write_output_float_register(0, tcp_force[0])
+        write_output_float_register(1, tcp_force[1])
+        write_output_float_register(2, tcp_force[2])
+        write_output_integer_register(0, pattern_id)
+
+        # Safety check
+        if get_force_magnitude() > MAX_FORCE:
+            check_and_backoff()
+            current_status = STATUS_ERROR
+            write_output_integer_register(1, current_status)
+            sleep(0.1)
+            continue
+        end
+
+        # Control logic
+        if control_flag == FLAG_STOP:
+            # Stop all motion
+            stopj(1.0)
+            current_status = STATUS_IDLE
+            write_output_integer_register(1, current_status)
+
+        elif control_flag == FLAG_PAUSE:
+            # Hold position
+            current_status = STATUS_PAUSED
+            write_output_integer_register(1, current_status)
+            sleep(0.1)
+
+        elif control_flag == FLAG_RUN:
+            # Execute pattern
+            current_status = STATUS_RUNNING
+            write_output_integer_register(1, current_status)
+
+            if pattern_id == PATTERN_LINEAR:
+                pattern_linear_stroke(target_force)
+            elif pattern_id == PATTERN_CIRCULAR:
+                pattern_circular_rubbing(target_force)
+            elif pattern_id == PATTERN_TRIGGER:
+                pattern_trigger_press(target_force)
+            elif pattern_id == PATTERN_KNEADING:
+                pattern_kneading(target_force)
+            else:
+                # Unknown pattern, idle
+                sleep(0.1)
+            end
+        end
+
+        # Sync with controller
+        sync()
+    end
+end
+
+# Start the resident program
+massage_resident()
